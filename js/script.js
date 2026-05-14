@@ -2,11 +2,301 @@
  * 侯鐘堡運動醫學品牌 - 互動腳本
  */
 
-// 等待 DOM 載入完成
+// ========================================
+// Cart State Management (Global)
+// ========================================
+const CART_KEY = 'hou_cart';
+
+// Load cart from localStorage
+function getCart() {
+    const cart = localStorage.getItem(CART_KEY);
+    return cart ? JSON.parse(cart) : [];
+}
+
+// Save cart to localStorage
+function saveCart(cart) {
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+}
+
+// Get total item count
+function getCartCount() {
+    return getCart().reduce((sum, item) => sum + item.quantity, 0);
+}
+
+// Get total price
+function getCartTotal() {
+    return getCart().reduce((sum, item) => {
+        const price = parseInt(item.currentPrice.replace(/NT\$|,/g, ''));
+        return sum + (price * item.quantity);
+    }, 0);
+}
+
+// Add item to cart
+function addToCart(productKey, quantity = 1) {
+    const product = productData[productKey];
+    if (!product) return false;
+
+    let cart = getCart();
+    const existingIndex = cart.findIndex(item => item.key === productKey);
+
+    if (existingIndex > -1) {
+        cart[existingIndex].quantity += quantity;
+    } else {
+        cart.push({
+            key: productKey,
+            icon: product.icon,
+            title: product.title,
+            currentPrice: product.currentPrice,
+            quantity: quantity
+        });
+    }
+
+    saveCart(cart);
+    updateCartUI();
+    return true;
+}
+
+// Remove item from cart
+function removeFromCart(productKey) {
+    let cart = getCart();
+    cart = cart.filter(item => item.key !== productKey);
+    saveCart(cart);
+    updateCartUI();
+}
+
+// Update item quantity
+function updateQuantity(productKey, newQuantity) {
+    if (newQuantity < 1) {
+        removeFromCart(productKey);
+        return;
+    }
+    
+    let cart = getCart();
+    const item = cart.find(item => item.key === productKey);
+    if (item) {
+        item.quantity = Math.min(newQuantity, 10);
+        saveCart(cart);
+        updateCartUI();
+    }
+}
+
+// Update cart badge and dropdown
+function updateCartUI() {
+    const cartBadge = document.getElementById('cartBadge');
+    const cartItems = document.getElementById('cartItems');
+    const cartFooter = document.getElementById('cartFooter');
+    const cartTotal = document.getElementById('cartTotal');
+    
+    if (!cartBadge) return;
+
+    const cart = getCart();
+    const count = getCartCount();
+    const total = getCartTotal();
+
+    // Update badge
+    cartBadge.textContent = count;
+    if (count > 0) {
+        cartBadge.style.display = 'flex';
+    } else {
+        cartBadge.style.display = 'none';
+    }
+
+    // Update cart dropdown
+    if (cart.length === 0) {
+        cartItems.innerHTML = '<p class="cart-empty">購物車是空的</p>';
+        if (cartFooter) cartFooter.style.display = 'none';
+    } else {
+        let itemsHtml = '';
+        cart.forEach(item => {
+            itemsHtml += `
+                <div class="cart-item" data-key="${item.key}">
+                    <div class="cart-item-icon">${item.icon}</div>
+                    <div class="cart-item-info">
+                        <div class="cart-item-title">${item.title}</div>
+                        <div class="cart-item-price">${item.currentPrice} × ${item.quantity}</div>
+                        <div class="cart-item-controls">
+                            <button class="cart-qty-btn qty-minus" data-key="${item.key}">−</button>
+                            <span class="cart-qty">${item.quantity}</span>
+                            <button class="cart-qty-btn qty-plus" data-key="${item.key}">+</button>
+                        </div>
+                    </div>
+                    <button class="cart-item-remove" data-key="${item.key}">&times;</button>
+                </div>
+            `;
+        });
+        cartItems.innerHTML = itemsHtml;
+        if (cartFooter) cartFooter.style.display = 'block';
+        if (cartTotal) cartTotal.textContent = 'NT$' + total.toLocaleString();
+
+        // Attach event listeners for quantity buttons
+        document.querySelectorAll('.cart-qty-btn.qty-minus').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const key = this.getAttribute('data-key');
+                const item = getCart().find(i => i.key === key);
+                if (item) updateQuantity(key, item.quantity - 1);
+            });
+        });
+
+        document.querySelectorAll('.cart-qty-btn.qty-plus').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const key = this.getAttribute('data-key');
+                const item = getCart().find(i => i.key === key);
+                if (item) updateQuantity(key, item.quantity + 1);
+            });
+        });
+
+        document.querySelectorAll('.cart-item-remove').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const key = this.getAttribute('data-key');
+                removeFromCart(key);
+            });
+        });
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <span class="toast-icon">${type === 'success' ? '✓' : '✕'}</span>
+        <span>${message}</span>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Toggle cart dropdown
+function toggleCart(show) {
+    const dropdown = document.getElementById('cartDropdown');
+    if (!dropdown) return;
+
+    if (show === undefined) {
+        dropdown.classList.toggle('active');
+    } else if (show) {
+        dropdown.classList.add('active');
+    } else {
+        dropdown.classList.remove('active');
+    }
+}
+
+// ========================================
+// Product Data (Global - needed by cart functions)
+// ========================================
+const productData = {
+    'honey-lemon-gel': {
+        icon: '🍯',
+        badge: '運動增補品',
+        title: 'BLACT蜂蜜檸檬果膠',
+        description: '採用天然蜂蜜與檸檬精製而成的能量果膠，適合賽前能量儲備與長時間運動補給。入口清新酸甜，快速補充碳水化合物，讓您在訓練與比賽中保持最佳狀態。',
+        originalPrice: 'NT$1,200',
+        currentPrice: 'NT$950',
+        discount: '79折',
+        paymentLink: 'https://www.blact.co'
+    },
+    'beetroot-capsule': {
+        icon: '🫐',
+        badge: '運動增補品',
+        title: 'SPEED ENERGY 全速甜菜根膠囊',
+        description: '富含天然硝酸鹽的甜菜根膠囊，有助於提升血液循環與氧氣運輸效率。增強運動耐力與爆發力，是馬拉松與自行車選手的熱門選擇。',
+        originalPrice: 'NT$1,699',
+        currentPrice: 'NT$1,399',
+        discount: '82折',
+        paymentLink: 'https://www.blact.co'
+    },
+    'q10-capsule': {
+        icon: '⚡',
+        badge: '運動增補品',
+        title: 'Power Q10爬升膠囊',
+        description: '高濃度輔酶Q10配方，支持細胞能量產生與心肌功能。在高強度訓練與爬坡項目中提供持久能量輸出，延緩疲勞發生。',
+        originalPrice: 'NT$1,799',
+        currentPrice: 'NT$1,499',
+        discount: '83折',
+        paymentLink: 'https://www.blact.co'
+    },
+    'electrolyte-capsule': {
+        icon: '💧',
+        badge: '運動增補品',
+        title: 'Power Salt強力電解膠囊',
+        description: '完整電解質配方，包含鈉、鉀、鎂、鈣等關鍵礦物質。有效預防運動中抽筋與電解質失衡，適合長時間耐力運動補給。',
+        originalPrice: 'NT$799',
+        currentPrice: 'NT$790',
+        discount: '99折',
+        paymentLink: 'https://www.blact.co'
+    },
+    'exosome-set': {
+        icon: '✨',
+        badge: '保養品',
+        title: '萃泌外泌體全效套裝組',
+        description: '革命性細胞修護科技，含有多種活性生長因子與修護肽。深層滋養肌膚，促進組織修復與再生，是運動後 recovery 的極佳輔助品。',
+        originalPrice: 'NT$4,447',
+        currentPrice: 'NT$3,288',
+        discount: '74折',
+        paymentLink: 'https://www.blact.co'
+    },
+    'maca-powder': {
+        icon: '🌿',
+        badge: '保健品',
+        title: '祕魯黑瑪卡粉',
+        description: '來自安地斯高原的優質黑瑪卡，含有豐富的胺基酸、維生素與礦物質。提升體力與耐力，調節生理機能，是運動員的天然能量補充來源。',
+        originalPrice: 'NT$1,200',
+        currentPrice: 'NT$990',
+        discount: '83折',
+        paymentLink: 'https://www.blact.co'
+    }
+};
+
+// Current product key being viewed in modal
+let currentProductKey = null;
+
+// ========================================
+// DOM Ready
+// ========================================
 document.addEventListener('DOMContentLoaded', function() {
     
     // ========================================
-    // 導航列滾動效果
+    // Initialize Cart UI on page load
+    // ========================================
+    updateCartUI();
+
+    // ========================================
+    // Cart Icon Click - Toggle Dropdown
+    // ========================================
+    const cartIcon = document.getElementById('cartIcon');
+    if (cartIcon) {
+        cartIcon.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleCart();
+        });
+    }
+
+    // Cart Close Button
+    const cartClose = document.getElementById('cartClose');
+    if (cartClose) {
+        cartClose.addEventListener('click', function() {
+            toggleCart(false);
+        });
+    }
+
+    // Close cart when clicking overlay (click outside to close)
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('cartDropdown');
+        const icon = document.getElementById('cartIcon');
+        if (dropdown && dropdown.classList.contains('active')) {
+            if (!dropdown.contains(e.target) && !icon.contains(e.target)) {
+                toggleCart(false);
+            }
+        }
+    });
+
+    // ========================================
+    // Navigation Scroll Effect
     // ========================================
     const navbar = document.getElementById('navbar');
     let lastScrollY = window.scrollY;
@@ -14,7 +304,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleNavbarScroll() {
         const currentScrollY = window.scrollY;
         
-        // 當滾動超過 50px 時添加 scrolled 類別
         if (currentScrollY > 50) {
             navbar.classList.add('scrolled');
         } else {
@@ -24,7 +313,6 @@ document.addEventListener('DOMContentLoaded', function() {
         lastScrollY = currentScrollY;
     }
     
-    // 監聽滾動事件（使用節流優化效能）
     let ticking = false;
     window.addEventListener('scroll', function() {
         if (!ticking) {
@@ -37,20 +325,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ========================================
-    // 移動裝置選單切換
+    // Mobile Menu Toggle
     // ========================================
     const navToggle = document.getElementById('navToggle');
     const navMenu = document.getElementById('navMenu');
     const navLinks = document.querySelectorAll('.nav-link');
     
-    // 切換選單顯示
     navToggle.addEventListener('click', function() {
         navToggle.classList.toggle('active');
         navMenu.classList.toggle('active');
         document.body.style.overflow = navMenu.classList.contains('active') ? 'hidden' : '';
     });
     
-    // 點擊選單連結後關閉選單
     navLinks.forEach(function(link) {
         link.addEventListener('click', function() {
             navToggle.classList.remove('active');
@@ -60,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ========================================
-    // 滾動動畫（Intersection Observer）
+    // Scroll Animations (Intersection Observer)
     // ========================================
     const observerOptions = {
         root: null,
@@ -80,7 +366,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, observerOptions);
     
-    // 初始化動畫元素樣式
     fadeInElements.forEach(function(element) {
         element.style.opacity = '0';
         element.style.transform = 'translateY(30px)';
@@ -89,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ========================================
-    // 錨點滾動平滑效果
+    // Smooth Scroll for Anchor Links
     // ========================================
     document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
         anchor.addEventListener('click', function(e) {
@@ -110,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // ========================================
-    // Hero 區域載入動畫
+    // Hero Section Load Animation
     // ========================================
     const heroContent = document.querySelector('.hero-content');
     if (heroContent) {
@@ -127,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ========================================
-    // 數字動畫效果（About 區）
+    // Number Animation (About Section)
     // ========================================
     const highlightNumbers = document.querySelectorAll('.highlight-number');
     
@@ -156,7 +441,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
             
-            // 使用 easeOutExpo 緩動函數
             const easeOutExpo = 1 - Math.pow(1 - progress, 4);
             const currentValue = Math.floor(easeOutExpo * (end - start) + start);
             
@@ -171,14 +455,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // ========================================
-    // 頁面載入完成
+    // Page Load Complete
     // ========================================
     window.addEventListener('load', function() {
         document.body.classList.add('loaded');
     });
 
     // ========================================
-    // Product Modal 功能
+    // Product Modal
     // ========================================
     const productModal = document.getElementById('productModal');
     const modalOverlay = document.querySelector('.modal-overlay');
@@ -195,76 +479,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const qtyInput = document.querySelector('.qty-input');
     const qtyMinus = document.querySelector('.qty-minus');
     const qtyPlus = document.querySelector('.qty-plus');
-
-    // 商品資料
-    const productData = {
-        'honey-lemon-gel': {
-            icon: '🍯',
-            badge: '運動增補品',
-            title: 'BLACT蜂蜜檸檬果膠',
-            description: '採用天然蜂蜜與檸檬精製而成的能量果膠，適合賽前能量儲備與長時間運動補給。入口清新酸甜，快速補充碳水化合物，讓您在訓練與比賽中保持最佳狀態。',
-            originalPrice: 'NT$1,200',
-            currentPrice: 'NT$950',
-            discount: '79折',
-            paymentLink: 'https://buy.stripe.com/test_honey_lemon_gel'
-        },
-        'beetroot-capsule': {
-            icon: '🫐',
-            badge: '運動增補品',
-            title: 'SPEED ENERGY 全速甜菜根膠囊',
-            description: '富含天然硝酸鹽的甜菜根膠囊，有助於提升血液循環與氧氣運輸效率。增強運動耐力與爆發力，是馬拉松與自行車選手的熱門選擇。',
-            originalPrice: 'NT$1,699',
-            currentPrice: 'NT$1,399',
-            discount: '82折',
-            paymentLink: 'https://buy.stripe.com/test_beetroot_capsule'
-        },
-        'q10-capsule': {
-            icon: '⚡',
-            badge: '運動增補品',
-            title: 'Power Q10爬升膠囊',
-            description: '高濃度輔酶Q10配方，支持細胞能量產生與心肌功能。在高強度訓練與爬坡項目中提供持久能量輸出，延緩疲勞發生。',
-            originalPrice: 'NT$1,799',
-            currentPrice: 'NT$1,499',
-            discount: '83折',
-            paymentLink: 'https://buy.stripe.com/test_q10_capsule'
-        },
-        'electrolyte-capsule': {
-            icon: '💧',
-            badge: '運動增補品',
-            title: 'Power Salt強力電解膠囊',
-            description: '完整電解質配方，包含鈉、鉀、鎂、鈣等關鍵礦物質。有效預防運動中抽筋與電解質失衡，適合長時間耐力運動補給。',
-            originalPrice: 'NT$799',
-            currentPrice: 'NT$790',
-            discount: '99折',
-            paymentLink: 'https://buy.stripe.com/test_electrolyte_capsule'
-        },
-        'exosome-set': {
-            icon: '✨',
-            badge: '保養品',
-            title: '萃泌外泌體全效套裝組',
-            description: '革命性細胞修護科技，含有多種活性生長因子與修護肽。深層滋養肌膚，促進組織修復與再生，是運動後 recovery 的極佳輔助品。',
-            originalPrice: 'NT$4,447',
-            currentPrice: 'NT$3,288',
-            discount: '74折',
-            paymentLink: 'https://buy.stripe.com/test_exosome_set'
-        },
-        'maca-powder': {
-            icon: '🌿',
-            badge: '保健品',
-            title: '祕魯黑瑪卡粉',
-            description: '來自安地斯高原的優質黑瑪卡，含有豐富的胺基酸、維生素與礦物質。提升體力與耐力，調節生理機能，是運動員的天然能量補充來源。',
-            originalPrice: 'NT$1,200',
-            currentPrice: 'NT$990',
-            discount: '83折',
-            paymentLink: 'https://buy.stripe.com/test_maca_powder'
-        }
-    };
+    const btnAddToCart = document.querySelector('.btn-add-to-cart');
 
     // 開啟 Modal
     function openModal(productKey) {
         const product = productData[productKey];
         if (!product) return;
 
+        currentProductKey = productKey;
         modalIcon.textContent = product.icon;
         modalBadge.textContent = product.badge;
         modalTitle.textContent = product.title;
@@ -283,9 +505,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function closeModal() {
         productModal.classList.remove('active');
         document.body.classList.remove('modal-open');
+        currentProductKey = null;
     }
 
-    // 卡片點擊事件（點擊整張卡片或按鈕都開啟）
+    // 卡片點擊事件
     shopCards.forEach(function(card) {
         card.addEventListener('click', function(e) {
             e.preventDefault();
@@ -326,6 +549,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const current = parseInt(qtyInput.value);
             if (current < 10) {
                 qtyInput.value = current + 1;
+            }
+        });
+    }
+
+    // 加入購物車按鈕
+    if (btnAddToCart) {
+        btnAddToCart.addEventListener('click', function() {
+            if (currentProductKey) {
+                const quantity = parseInt(qtyInput.value) || 1;
+                addToCart(currentProductKey, quantity);
+                showToast('已加入購物車');
+                closeModal();
             }
         });
     }

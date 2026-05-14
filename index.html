@@ -196,7 +196,7 @@
                 <p class="section-desc">由侯鐘堡醫師親自把關，針對馬拉松與鐵人三項運動員設計的專業补给</p>
             </div>
             <div class="shop-grid">
-                <div class="product-card shop-card">
+                <div class="product-card shop-card" data-product="honey-lemon-gel">
                     <div class="shop-badge">運動增補品</div>
                     <div class="shop-card-image">
                         <div class="shop-card-icon">🍯</div>
@@ -207,9 +207,9 @@
                         <span class="price-current">NT$950</span>
                         <span class="price-discount">79折</span>
                     </div>
-                    <a href="https://www.blact.co/products/product-pApMrsgGJnC6PwrqKwPdBb" target="_blank" class="btn-shop">前往選購</a>
+                    <button class="btn-shop">查看詳情</button>
                 </div>
-                <div class="product-card shop-card">
+                <div class="product-card shop-card" data-product="beetroot-capsule">
                     <div class="shop-badge">運動增補品</div>
                     <div class="shop-card-image">
                         <div class="shop-card-icon">🫐</div>
@@ -220,9 +220,9 @@
                         <span class="price-current">NT$1,399</span>
                         <span class="price-discount">82折</span>
                     </div>
-                    <a href="https://www.blact.co/products/product-pf7Mmf9m5KP5KxgRswwqNT" target="_blank" class="btn-shop">前往選購</a>
+                    <button class="btn-shop">查看詳情</button>
                 </div>
-                <div class="product-card shop-card">
+                <div class="product-card shop-card" data-product="q10-capsule">
                     <div class="shop-badge">運動增補品</div>
                     <div class="shop-card-image">
                         <div class="shop-card-icon">⚡</div>
@@ -233,9 +233,9 @@
                         <span class="price-current">NT$1,499</span>
                         <span class="price-discount">83折</span>
                     </div>
-                    <a href="https://www.blact.co/products/product-xxAHRR9WdqqeHiPtyQpyZM" target="_blank" class="btn-shop">前往選購</a>
+                    <button class="btn-shop">查看詳情</button>
                 </div>
-                <div class="product-card shop-card">
+                <div class="product-card shop-card" data-product="electrolyte-capsule">
                     <div class="shop-badge">運動增補品</div>
                     <div class="shop-card-image">
                         <div class="shop-card-icon">💧</div>
@@ -246,9 +246,9 @@
                         <span class="price-current">NT$790</span>
                         <span class="price-discount">99折</span>
                     </div>
-                    <a href="https://www.blact.co/products/product-a7MN8nsWpyWBBbDQLdJBzZ" target="_blank" class="btn-shop">前往選購</a>
+                    <button class="btn-shop">查看詳情</button>
                 </div>
-                <div class="product-card shop-card">
+                <div class="product-card shop-card" data-product="exosome-set">
                     <div class="shop-badge">保養品</div>
                     <div class="shop-card-image">
                         <div class="shop-card-icon">✨</div>
@@ -259,9 +259,9 @@
                         <span class="price-current">NT$3,288</span>
                         <span class="price-discount">74折</span>
                     </div>
-                    <a href="https://www.blact.co/products/product-aygigyTPBBAe3xLDsjsN4W" target="_blank" class="btn-shop">前往選購</a>
+                    <button class="btn-shop">查看詳情</button>
                 </div>
-                <div class="product-card shop-card">
+                <div class="product-card shop-card" data-product="maca-powder">
                     <div class="shop-badge">保健品</div>
                     <div class="shop-card-image">
                         <div class="shop-card-icon">🌿</div>
@@ -272,7 +272,7 @@
                         <span class="price-current">NT$990</span>
                         <span class="price-discount">83折</span>
                     </div>
-                    <a href="https://www.blact.co/products/product-HbdvVAf5fTY3Mp8vPxxWp6" target="_blank" class="btn-shop">前往選購</a>
+                    <button class="btn-shop">查看詳情</button>
                 </div>
             </div>
             <div class="shop-cta">
@@ -351,6 +351,39 @@
             </div>
         </div>
     </footer>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="modal-close" aria-label="關閉">&times;</button>
+            <div class="modal-body">
+                <div class="modal-image">
+                    <span class="modal-icon"></span>
+                </div>
+                <div class="modal-info">
+                    <span class="modal-badge"></span>
+                    <h2 class="modal-title"></h2>
+                    <p class="modal-description"></p>
+                    <div class="modal-price">
+                        <span class="modal-price-original"></span>
+                        <span class="modal-price-current"></span>
+                        <span class="modal-price-discount"></span>
+                    </div>
+                    <div class="modal-quantity">
+                        <label>數量</label>
+                        <div class="quantity-selector">
+                            <button class="qty-btn qty-minus">−</button>
+                            <input type="number" class="qty-input" value="1" min="1" max="10">
+                            <button class="qty-btn qty-plus">+</button>
+                        </div>
+                    </div>
+                    <a href="#" class="btn-buy" target="_blank">立即購買</a>
+                    <p class="modal-note">點擊購買將跳轉至 Stripe 安全付款頁面</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="js/script.js"></script>
 </body>
